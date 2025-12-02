@@ -2,8 +2,10 @@
 Cost Calculation Utilities for Project Codex.
 Wraps LiteLLM's cost estimation logic.
 """
+
 from typing import Any, Dict
 from litellm import completion_cost  # type: ignore
+
 
 def calculate_response_cost(completion_response: Any) -> float:
     """
@@ -22,6 +24,7 @@ def calculate_response_cost(completion_response: Any) -> float:
     except Exception:
         # Fail safe for cost calculation (non-critical)
         return 0.0
+
 
 def estimate_tokens(text: str) -> int:
     """

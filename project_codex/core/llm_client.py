@@ -2,6 +2,7 @@
 LLM Client for Project Codex.
 Wraps LiteLLM to provide a unified interface for model interactions.
 """
+
 from typing import List, Dict, Any, Optional, Tuple, cast
 from litellm import completion, ModelResponse  # type: ignore
 from project_codex.utils.cost_calc import calculate_response_cost
@@ -72,14 +73,14 @@ class LLMClient:
             # Choices can be a list of Choices or StreamingChoices. We assume standard completion here.
             # We access index 0 safely.
             if not model_response.choices:
-                 raise ValueError("LLM returned no choices.")
+                raise ValueError("LLM returned no choices.")
 
             first_choice = model_response.choices[0]
             # Verify it has message and content. We access via getattr to avoid static type errors
             # with StreamingChoices which might not have 'message' in the type definition but works at runtime if not streaming.
             message = getattr(first_choice, "message", None)
             if not message or not message.content:
-                 raise ValueError("LLM returned empty content.")
+                raise ValueError("LLM returned empty content.")
 
             content = message.content
 
