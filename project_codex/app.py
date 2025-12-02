@@ -3,6 +3,12 @@ Main Streamlit Application for Project Codex.
 Handles UI, Configuration, and Task execution.
 """
 import os
+import sys
+
+# This is a workaround for streamlit's execution model.
+# It ensures the project root is in the python path.
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 import uuid
 import time
 import json
@@ -43,12 +49,18 @@ st.set_page_config(page_title="Project Codex", layout="wide")
 @st.cache_resource
 def get_managers():
     """Initialize and cache all manager instances."""
-    c_mgr = ConfigManager()
-    d_mgr = DBManager()
-    r_eng = RAGEngine()
-    t_mgr = TermManager(r_eng)
-    l_cli = LLMClient()
-    w_eng = WorkflowEngine(c_mgr, l_cli, r_eng)
+    with st.spinner("Initializing configuration..."):
+        c_mgr = ConfigManager()
+    with st.spinner("Connecting to database..."):
+        d_mgr = DBManager()
+    with st.spinner("Loading RAG engine... (this may take a moment)"):
+        r_eng = RAGEngine()
+    with st.spinner("Initializing term manager..."):
+        t_mgr = TermManager(r_eng)
+    with st.spinner("Initializing LLM client..."):
+        l_cli = LLMClient()
+    with st.spinner("Building workflow engine..."):
+        w_eng = WorkflowEngine(c_mgr, l_cli, r_eng)
     ex = ThreadPoolExecutor(max_workers=3)  # Limit concurrency
     return c_mgr, d_mgr, r_eng, t_mgr, l_cli, w_eng, ex
 
