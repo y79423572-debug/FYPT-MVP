@@ -141,17 +141,18 @@ class RAGEngine:
 
     def clear_collection(self, collection_name: str) -> None:
         """
-        Delete a collection (effectively clearing it) and recreate it.
+        Delete a collection if it exists.
 
         Args:
              collection_name: The name of the collection to clear.
         """
         try:
-            self.client.delete_collection(collection_name)
-        except ValueError:
-            # Collection might not exist, which is fine
-            pass
+            # Check if the collection exists before attempting to delete it.
+            existing_collections = [c.name for c in self.client.list_collections()]
+            if collection_name in existing_collections:
+                self.client.delete_collection(name=collection_name)
         except Exception as e:
+            # For any other unexpected errors, re-raise them as a runtime error.
             raise RuntimeError(
                 f"Failed to clear collection '{collection_name}': {str(e)}"
             ) from e

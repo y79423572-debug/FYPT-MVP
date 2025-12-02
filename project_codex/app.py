@@ -15,6 +15,26 @@ from project_codex.core.term_manager import TermManager
 from project_codex.core.llm_client import LLMClient
 from project_codex.core.pipeline import WorkflowEngine
 
+
+def decode_uploaded_file(uploaded_file) -> str:
+    """
+    Safely decode a file uploaded via Streamlit, trying multiple common encodings.
+    """
+    file_bytes = uploaded_file.read()
+    # GBK is a superset of GB2312, so we don't need to list both.
+    encodings_to_try = ["utf-8", "gbk"]
+    for encoding in encodings_to_try:
+        try:
+            return file_bytes.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    # If all fail, raise a clear error.
+    raise ValueError(
+        "Unable to decode the file. Please ensure it is a text file with a "
+        f"common encoding like: {', '.join(encodings_to_try)}"
+    )
+
+
 # Page Config
 st.set_page_config(page_title="Project Codex", layout="wide")
 
@@ -201,7 +221,7 @@ with st.sidebar:
     uploaded_style = st.file_uploader("Upload Style Bank (TXT/JSON)", type=["txt", "json"])
     if uploaded_style:
         try:
-            content = uploaded_style.read().decode("utf-8")
+            content = decode_uploaded_file(uploaded_style)
             if uploaded_style.type == "application/json":
                 # Expect list of strings or objects
                 # Format: [{"text": "...", "tag": "action"}]
@@ -267,7 +287,12 @@ with col_start:
         if not source_file:
             st.warning("Please upload a file.")
         else:
-            text_content = source_file.read().decode("utf-8")
+            try:
+                text_content = decode_uploaded_file(source_file)
+            except ValueError as e:
+                st.error(f"Error reading file: {e}")
+                st.stop()
+
             task_id = str(uuid.uuid4())
             file_name = source_file.name
 
