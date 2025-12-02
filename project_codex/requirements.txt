@@ -1,0 +1,8 @@
+streamlit
+litellm
+chromadb
+pytest
+pylint
+black
+pyright
+python-dotenv
