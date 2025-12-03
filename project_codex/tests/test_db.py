@@ -5,6 +5,7 @@ import tempfile
 import shutil
 from project_codex.utils.db import DBManager, GlobalCircuitBreakerError
 
+
 @pytest.fixture
 def temp_db_manager():
     test_dir = tempfile.mkdtemp()
@@ -13,14 +14,18 @@ def temp_db_manager():
     yield db_manager
     shutil.rmtree(test_dir)
 
+
 def test_db_initialization(temp_db_manager):
     assert os.path.exists(temp_db_manager.db_path)
 
     conn = sqlite3.connect(temp_db_manager.db_path)
     cursor = conn.cursor()
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='tasks';")
+    cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='tasks';"
+    )
     assert cursor.fetchone() is not None
     conn.close()
+
 
 def test_create_and_get_task(temp_db_manager):
     task_id = "task_123"
@@ -31,8 +36,9 @@ def test_create_and_get_task(temp_db_manager):
     task = temp_db_manager.get_task(task_id)
     assert task is not None
     assert task["id"] == task_id
-    assert task["file_name"] == file_name
+    assert task["filename"] == file_name
     assert task["status"] == "Pending"
+
 
 def test_update_task(temp_db_manager):
     task_id = "task_456"
@@ -44,10 +50,11 @@ def test_update_task(temp_db_manager):
     assert task["status"] == "Processing"
     assert task["current_step"] == "Extraction"
 
-    temp_db_manager.update_task_status(task_id, "Error", error="API Timeout")
+    temp_db_manager.update_task_status(task_id, "Error", error_log="API Timeout")
     task_updated = temp_db_manager.get_task(task_id)
     assert task_updated["status"] == "Error"
-    assert task_updated["error_message"] == "API Timeout"
+    assert task_updated["error_log"] == "API Timeout"
+
 
 def test_update_task_content(temp_db_manager):
     task_id = "task_content"
@@ -56,15 +63,16 @@ def test_update_task_content(temp_db_manager):
     temp_db_manager.update_task_status(
         task_id,
         "Processing",
-        draft_text="Once upon a time",
-        critique='{"score": 5}',
-        final_text="Once upon a time..."
+        result_p1="Once upon a time",
+        result_judge='{"score": 5}',
+        result_final="Once upon a time...",
     )
 
     task = temp_db_manager.get_task(task_id)
-    assert task["draft_text"] == "Once upon a time"
-    assert task["critique"] == '{"score": 5}'
-    assert task["final_text"] == "Once upon a time..."
+    assert task["result_p1"] == "Once upon a time"
+    assert task["result_judge"] == '{"score": 5}'
+    assert task["result_final"] == "Once upon a time..."
+
 
 def test_circuit_breaker_trigger(temp_db_manager):
     # Verify initial state
@@ -87,6 +95,7 @@ def test_circuit_breaker_trigger(temp_db_manager):
     # Subsequent check should raise
     with pytest.raises(GlobalCircuitBreakerError):
         temp_db_manager.check_circuit()
+
 
 def test_circuit_breaker_reset(temp_db_manager):
     # Trigger it first

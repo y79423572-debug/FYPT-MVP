@@ -2,6 +2,7 @@
 RAG Engine module for Project Codex.
 Handles interactions with ChromaDB for storing and retrieving terms and styles.
 """
+
 import os
 import uuid
 from typing import List, Dict, Optional, Any, cast
@@ -101,6 +102,39 @@ class RAGEngine:
         except Exception as e:
             raise RuntimeError(
                 f"Failed to add texts to collection '{collection_name}': {str(e)}"
+            ) from e
+
+    def upsert_texts(
+        self,
+        collection_name: str,
+        texts: List[str],
+        metadatas: Optional[List[Dict[str, Any]]] = None,
+        ids: Optional[List[str]] = None,
+    ) -> None:
+        """
+        Upsert texts to a specific collection.
+        """
+        if not texts:
+            return
+
+        if metadatas is not None and len(texts) != len(metadatas):
+            raise ValueError("The length of 'texts' and 'metadatas' must match.")
+
+        if ids is not None and len(texts) != len(ids):
+            raise ValueError("The length of 'texts' and 'ids' must match.")
+
+        if ids is None:
+             # Generates IDs if missing, but upsert usually requires stable IDs to update.
+             # We generate them anyway if caller didn't provide.
+             ids = [str(uuid.uuid4()) for _ in texts]
+
+        try:
+            collection = self._get_collection(collection_name)
+            valid_metadatas = cast(Optional[List[Metadata]], metadatas)
+            collection.upsert(documents=texts, metadatas=valid_metadatas, ids=ids)
+        except Exception as e:
+            raise RuntimeError(
+                f"Failed to upsert texts to collection '{collection_name}': {str(e)}"
             ) from e
 
     def query(
