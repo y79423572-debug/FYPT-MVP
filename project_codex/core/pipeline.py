@@ -70,15 +70,19 @@ class WorkflowEngine:
             if not original:
                 continue
 
-            results = self.rag.query(
-                collection_name="glossary", query_text=original, n_results=1
-            )
+            try:
+                results = self.rag.query(
+                    collection_name="glossary", query_text=original, n_results=1
+                )
 
-            is_known = False
-            if results["documents"] and results["documents"][0]:
-                stored_text = results["documents"][0][0]
-                if f"Original: {original}" in stored_text:
-                    is_known = True
+                is_known = False
+                if results["documents"] and results["documents"][0]:
+                    stored_text = results["documents"][0][0]
+                    if f"Original: {original}" in stored_text:
+                        is_known = True
+            except Exception:
+                # Fail-safe: If RAG query fails (e.g. empty collection), treat as unknown
+                is_known = False
 
             if not is_known:
                 suggestions.append(item)
@@ -91,13 +95,17 @@ class WorkflowEngine:
         """
         Step 2: Drafting (P1).
         """
-        results = self.rag.query(
-            collection_name="glossary", query_text=text, n_results=10
-        )
+        try:
+            results = self.rag.query(
+                collection_name="glossary", query_text=text, n_results=10
+            )
 
-        glossary_context = ""
-        if results["documents"] and results["documents"][0]:
-            glossary_context = "\n".join(results["documents"][0])
+            glossary_context = ""
+            if results["documents"] and results["documents"][0]:
+                glossary_context = "\n".join(results["documents"][0])
+        except Exception:
+            # Fail-safe
+            glossary_context = ""
 
         # Inject glossary into prompt if placeholder exists, else append
         if "{glossary_text}" in system_prompt:
@@ -170,16 +178,20 @@ class WorkflowEngine:
         # Metadata Filtering
         where_filter = {"tag": style_tag} if style_tag != "general" else None
 
-        results = self.rag.query(
-            collection_name="style_bank",
-            query_text=draft,
-            n_results=3,
-            where=where_filter,
-        )
+        try:
+            results = self.rag.query(
+                collection_name="style_bank",
+                query_text=draft,
+                n_results=3,
+                where=where_filter
+            )
 
-        style_context = ""
-        if results["documents"] and results["documents"][0]:
-            style_context = "\n\n".join(results["documents"][0])
+            style_context = ""
+            if results["documents"] and results["documents"][0]:
+                style_context = "\n\n".join(results["documents"][0])
+        except Exception:
+            # Fail-safe
+            style_context = ""
 
         critique_text = json.dumps(critique, ensure_ascii=False)
 
