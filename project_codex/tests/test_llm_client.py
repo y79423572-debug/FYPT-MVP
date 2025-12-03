@@ -2,9 +2,11 @@ import pytest
 from unittest.mock import MagicMock, patch
 from project_codex.core.llm_client import LLMClient
 
+
 @pytest.fixture
 def llm_client():
     return LLMClient()
+
 
 @patch("project_codex.utils.cost_calc.completion_cost")
 @patch("project_codex.core.llm_client.completion")
@@ -36,12 +38,14 @@ def test_call_llm_success(mock_completion, mock_cost, llm_client):
     assert call_kwargs["messages"] == messages
     assert call_kwargs["temperature"] == 0.7
 
+
 @patch("project_codex.core.llm_client.completion")
 def test_call_llm_failure(mock_completion, llm_client):
     mock_completion.side_effect = Exception("API Error")
 
     with pytest.raises(RuntimeError, match="LLM Call Failed"):
         llm_client.call_llm(model="gpt-4", messages=[])
+
 
 @patch("project_codex.core.llm_client.completion")
 def test_call_llm_with_context_caching(mock_completion, llm_client):
@@ -53,6 +57,7 @@ def test_call_llm_with_context_caching(mock_completion, llm_client):
 
     call_kwargs = mock_completion.call_args.kwargs
     assert call_kwargs.get("caching") is True
+
 
 @patch("project_codex.core.llm_client.completion")
 def test_call_llm_json_mode(mock_completion, llm_client):

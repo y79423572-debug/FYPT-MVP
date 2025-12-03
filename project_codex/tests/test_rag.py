@@ -4,6 +4,7 @@ import tempfile
 import os
 from project_codex.core.rag_engine import RAGEngine
 
+
 @pytest.fixture
 def temp_rag_engine():
     # Create a temporary directory for the vector DB
@@ -13,9 +14,11 @@ def temp_rag_engine():
     # Cleanup
     shutil.rmtree(test_dir)
 
+
 def test_initialization(temp_rag_engine):
     assert temp_rag_engine.client is not None
     assert os.path.exists(temp_rag_engine.persist_directory)
+
 
 def test_add_and_query_texts(temp_rag_engine):
     collection_name = "test_collection"
@@ -33,13 +36,15 @@ def test_add_and_query_texts(temp_rag_engine):
     assert results["documents"][0][0] == "apple"
     assert results["metadatas"][0][0]["type"] == "fruit"
 
+
 def test_add_texts_mismatched_lengths(temp_rag_engine):
     collection_name = "error_collection"
     texts = ["one", "two"]
-    metadatas = [{"id": 1}] # Mismatched length
+    metadatas = [{"id": 1}]  # Mismatched length
 
     with pytest.raises(ValueError):
         temp_rag_engine.add_texts(collection_name, texts, metadatas=metadatas)
+
 
 def test_query_nonexistent_collection(temp_rag_engine):
     # ChromaDB (v0.4+) usually creates collection on get_or_create, so query should return empty or valid struct
@@ -58,14 +63,19 @@ def test_query_nonexistent_collection(temp_rag_engine):
         temp_rag_engine.query(collection_name, "test", n_results=1)
     except RuntimeError as e:
         # If the underlying error is about empty collection, that's fine.
-        assert "not enough elements" in str(e).lower() or "index" in str(e).lower() or "created" in str(e).lower()
+        assert (
+            "not enough elements" in str(e).lower()
+            or "index" in str(e).lower()
+            or "created" in str(e).lower()
+        )
+
 
 def test_glossary_use_case(temp_rag_engine):
     collection_name = "glossary"
     texts = ["fireball", "ice storm"]
     metadatas = [
         {"translation": "火球术", "remark": "Basic spell"},
-        {"translation": "冰风暴", "remark": "AOE spell"}
+        {"translation": "冰风暴", "remark": "AOE spell"},
     ]
 
     temp_rag_engine.add_texts(collection_name, texts, metadatas=metadatas)

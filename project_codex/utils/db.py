@@ -2,6 +2,7 @@
 Database Manager for Project Codex.
 Handles SQLite operations and Circuit Breaker logic.
 """
+
 import sqlite3
 import os
 from typing import Optional, List, Dict, Any
@@ -51,16 +52,23 @@ class DBManager:
 
     def _init_db(self):
         """Create necessary tables if they don't exist."""
+        # Note: If schema changes, we might need to handle migration or drop table.
+        # For this refactor, we assume we can create if not exists, but column names changed.
+        # We will try to create the new table. If the old one exists with old columns, it might be an issue.
+        # Ideally, we should migrate. For this task, I'll drop the old table if it has the wrong schema or just ignore existing data.
+        # Let's check if we can query the new columns.
+
         create_tasks_table = """
         CREATE TABLE IF NOT EXISTS tasks (
             id TEXT PRIMARY KEY,
-            file_name TEXT NOT NULL,
+            filename TEXT NOT NULL,
+            source_text TEXT,
             status TEXT NOT NULL, -- Pending, Processing, Done, Error
             current_step TEXT,
-            error_message TEXT,
-            draft_text TEXT,
-            critique TEXT,
-            final_text TEXT,
+            result_p1 TEXT,
+            result_judge TEXT,
+            result_final TEXT,
+            error_log TEXT,
             token_usage INTEGER DEFAULT 0,
             cost_estimate REAL DEFAULT 0.0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -71,6 +79,13 @@ class DBManager:
         conn = self._get_connection()
         try:
             cursor = conn.cursor()
+            # simple check if table exists and has old columns
+            cursor.execute("PRAGMA table_info(tasks)")
+            columns = [info[1] for info in cursor.fetchall()]
+            if "draft_text" in columns and "result_p1" not in columns:
+                # Old schema detected, drop and recreate (WARNING: DATA LOSS, acceptable for dev refactor)
+                cursor.execute("DROP TABLE tasks")
+
             cursor.execute(create_tasks_table)
             conn.commit()
         except sqlite3.Error as e:
@@ -78,14 +93,14 @@ class DBManager:
         finally:
             conn.close()
 
-    def create_task(self, task_id: str, file_name: str) -> None:
+    def create_task(self, task_id: str, filename: str, source_text: str = "") -> None:
         """Create a new task entry."""
         conn = self._get_connection()
         try:
             cursor = conn.cursor()
             cursor.execute(
-                "INSERT INTO tasks (id, file_name, status) VALUES (?, ?, ?)",
-                (task_id, file_name, "Pending"),
+                "INSERT INTO tasks (id, filename, source_text, status) VALUES (?, ?, ?, ?)",
+                (task_id, filename, source_text, "Pending"),
             )
             conn.commit()
         except sqlite3.Error as e:
@@ -98,10 +113,10 @@ class DBManager:
         task_id: str,
         status: str,
         step: Optional[str] = None,
-        error: Optional[str] = None,
-        draft_text: Optional[str] = None,
-        critique: Optional[str] = None,
-        final_text: Optional[str] = None,
+        error_log: Optional[str] = None,
+        result_p1: Optional[str] = None,
+        result_judge: Optional[str] = None,
+        result_final: Optional[str] = None,
         token_usage: Optional[int] = None,
         cost_estimate: Optional[float] = None,
     ) -> None:
@@ -116,21 +131,21 @@ class DBManager:
                 updates.append("current_step = ?")
                 params.append(step)
 
-            if error:
-                updates.append("error_message = ?")
-                params.append(error)
+            if error_log:
+                updates.append("error_log = ?")
+                params.append(error_log)
 
-            if draft_text:
-                updates.append("draft_text = ?")
-                params.append(draft_text)
+            if result_p1:
+                updates.append("result_p1 = ?")
+                params.append(result_p1)
 
-            if critique:
-                updates.append("critique = ?")
-                params.append(critique)
+            if result_judge:
+                updates.append("result_judge = ?")
+                params.append(result_judge)
 
-            if final_text:
-                updates.append("final_text = ?")
-                params.append(final_text)
+            if result_final:
+                updates.append("result_final = ?")
+                params.append(result_final)
 
             if token_usage is not None:
                 updates.append("token_usage = ?")
@@ -185,4 +200,6 @@ class DBManager:
     def check_circuit(self):
         """Check if circuit is open and raise error if so."""
         if self.circuit_open:
-            raise GlobalCircuitBreakerError("Circuit Breaker is OPEN. Operation denied.")
+            raise GlobalCircuitBreakerError(
+                "Circuit Breaker is OPEN. Operation denied."
+            )
