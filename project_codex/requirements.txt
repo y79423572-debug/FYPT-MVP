@@ -1,0 +1,11 @@
+streamlit
+litellm
+chromadb
+pytest
+pylint
+black
+pyright
+python-dotenv
+chardet
+cchardet
+charset-normalizer
