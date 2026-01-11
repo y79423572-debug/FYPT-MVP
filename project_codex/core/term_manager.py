@@ -2,6 +2,7 @@
 Term Manager for Project Codex.
 Handles loading and saving of glossary terms and synchronization with ChromaDB.
 """
+
 import csv
 import os
 import uuid

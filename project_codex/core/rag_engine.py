@@ -2,6 +2,7 @@
 RAG Engine module for Project Codex.
 Handles interactions with ChromaDB for storing and retrieving terms and styles.
 """
+
 import os
 import uuid
 from typing import List, Dict, Optional, Any, cast
